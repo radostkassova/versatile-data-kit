@@ -35,6 +35,9 @@ public class JobImageBuilder {
    private static final String REGISTRY_TYPE_ECR = "ecr";
    private static final String REGISTRY_TYPE_GENERIC = "generic";
 
+   private static final String BUILDER_ANNOTATION_APP_ARMOR = "container.apparmor.security.beta.kubernetes.io/";
+   private static final String BUILDER_ANNOTATION_SECCOMP = "container.seccomp.security.alpha.kubernetes.io/";
+
    @Value("${datajobs.git.url}")
    private String gitRepo;
    @Value("${datajobs.git.username}")
@@ -63,6 +66,15 @@ public class JobImageBuilder {
    private String builderJobImagePullPolicy;
    @Value("${datajobs.git.ssl.enabled}")
    private boolean gitDataJobsSslEnabled;
+
+   @Value("${datajob.builder.securitycontext.allowPrivilegeEscalation}")
+   private boolean  builderSecurityContextAllowPrivilegeEscalation;
+
+   @Value("${datajob.builder.securitycontext.user}")
+   private long  builderSecurityContextUser;
+
+   @Value("${datajob.builder.securitycontext.group}")
+   private long  builderSecurityContextGroup;
 
    private final ControlKubernetesService controlKubernetesService;
    private final DockerRegistryService dockerRegistryService;
@@ -154,7 +166,12 @@ public class JobImageBuilder {
             null,
             builderJobImagePullPolicy,
             kubernetesResources.builderRequests(),
-            kubernetesResources.builderLimits());
+            kubernetesResources.builderLimits(),
+            Map.of(BUILDER_ANNOTATION_APP_ARMOR + builderJobName, "unconfined",
+                  BUILDER_ANNOTATION_SECCOMP + builderJobName, "unconfined"),
+            builderSecurityContextAllowPrivilegeEscalation,
+            builderSecurityContextUser,
+            builderSecurityContextGroup);
 
       log.debug("Waiting for builder job {} for data job version {}", builderJobName, jobDeployment.getGitCommitSha());
 
